@@ -1,0 +1,442 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Mode Library</title>
+<style>
+:root {
+  --bg: #0b0d12;
+  --panel: #141720;
+  --line: #282d3a;
+  --text: #f3f4f8;
+  --muted: #9299aa;
+  --accent: #a9f56c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, system-ui, sans-serif;
+}
+header {
+  padding: 38px 20px 25px;
+  max-width: 1100px;
+  margin: auto;
+}
+.eyebrow {
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 3px;
+  font-weight: 800;
+}
+h1 {
+  font-size: clamp(32px, 7vw, 58px);
+  margin: 12px 0;
+  letter-spacing: -2px;
+}
+header p { color: var(--muted); line-height: 1.7; }
+main { max-width: 1100px; padding: 0 20px 50px; margin: auto; }
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 15px 0 20px;
+}
+input, select, button {
+  font: inherit;
+}
+input, select {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  padding: 13px 14px;
+  border-radius: 10px;
+}
+#search { flex: 1; min-width: 190px; }
+button {
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: #202431;
+  color: var(--text);
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+button:hover { border-color: var(--accent); }
+.tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: 8px;
+  padding-bottom: 18px;
+}
+.tabs button { white-space: nowrap; }
+.tabs button.active {
+  background: var(--accent);
+  color: #10150c;
+  border-color: var(--accent);
+  font-weight: 800;
+}
+.info {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 8px 0 14px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  padding: 16px;
+  min-width: 0;
+}
+.card:hover { border-color: #596344; }
+.code {
+  color: var(--accent);
+  font-size: 15px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+.desc {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+  min-height: 40px;
+  margin: 9px 0 14px;
+}
+.card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.tag { font-size: 11px; color: var(--muted); }
+.copy { font-size: 12px; }
+.copy-all {
+  background: var(--accent);
+  color: #10150c;
+  border-color: var(--accent);
+  font-weight: 800;
+}
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 50px 10px;
+}
+footer {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  padding: 22px;
+  text-align: center;
+  font-size: 12px;
+}
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent);
+  color: #10150c;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 750;
+  display: none;
+  z-index: 10;
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">VISUAL TOOLKIT / 001</div>
+  <h1>Photo Mode<br>Library<span style="color:var(--accent)">.</span></h1>
+  <p>Kumpulan keyword POV, camera angle, framing, lens,
+  composition, dan style fotografi untuk referensi edit foto AI.</p>
+</header>
+
+<main>
+  <div class="toolbar">
+    <input id="search" type="search"
+      placeholder="Cari mode, contoh: overheadpov..."
+      aria-label="Cari mode fotografi">
+    <button class="copy-all" id="copyAll">Salin hasil</button>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="info">
+    <span id="count">0 mode</span>
+    <span>PHOTO REFERENCE INDEX</span>
+  </div>
+
+  <section class="grid" id="grid"></section>
+  <div class="empty" id="empty" hidden>Mode tidak ditemukan.</div>
+</main>
+
+<footer>
+  PHOTO MODE LIBRARY · Keyword adalah referensi prompt,
+  bukan perintah universal semua aplikasi.
+</footer>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const groups = {
+  "POV & Angle": [
+    ["overheadpov","Kamera tepat di atas subjek, mengarah ke bawah."],
+    ["birdeyeview","Sudut pandang dari ketinggian seperti mata burung."],
+    ["highangle","Kamera tinggi mengarah ke bawah."],
+    ["lowangle","Kamera rendah mengarah ke atas."],
+    ["wormseyeview","Kamera sangat rendah, dekat permukaan tanah."],
+    ["eyelevel","Kamera sejajar dengan mata."],
+    ["pov","Perspektif sudut pandang orang pertama."],
+    ["firstpersonpov","Seolah-olah melihat melalui mata sendiri."],
+    ["thirdpersonview","Subjek terlihat dari perspektif orang ketiga."],
+    ["overtheshoulder","Kamera melewati bahu seseorang."],
+    ["dutchangle","Horizon kamera dimiringkan secara diagonal."],
+    ["frontalview","Tampilan langsung dari depan."],
+    ["sideprofile","Tampilan profil samping."],
+    ["threequarterview","Sudut tampak tiga perempat."],
+    ["backview","Subjek terlihat dari belakang."],
+    ["selfieview","Perspektif selfie."],
+    ["overheadselfie","Selfie dengan kamera di atas."],
+    ["topdownview","Kamera mengarah tegak lurus ke bawah."],
+    ["aerialview","Perspektif dari udara."],
+    ["droneview","Gaya pengambilan gambar drone."],
+    ["groundlevel","Kamera dekat permukaan tanah."],
+    ["kneelevel","Kamera setinggi lutut."],
+    ["hiplevel","Kamera setinggi pinggul."],
+    ["waistlevel","Kamera setinggi pinggang."],
+    ["shoulderlevel","Kamera setinggi bahu."],
+    ["isometricview","Perspektif menyerupai ilustrasi isometrik."],
+    ["mirrorpov","Perspektif melalui cermin."],
+    ["throughwindow","Foto diambil melalui jendela."],
+    ["throughglass","Foto melalui permukaan kaca."],
+    ["peekabooangle","Subjek terlihat dari balik objek."]
+  ],
+  "Framing": [
+    ["extremecloseup","Detail sangat dekat seperti mata atau tekstur."],
+    ["closeup","Potret wajah dari jarak dekat."],
+    ["mediumcloseup","Kepala hingga bahu."],
+    ["mediumshot","Potret sekitar pinggang hingga kepala."],
+    ["cowboyshot","Framing sekitar paha hingga kepala."],
+    ["fullbodyshot","Seluruh tubuh masuk ke dalam frame."],
+    ["longshot","Subjek beserta lingkungan sekitar."],
+    ["wideshot","Bidang pandang lebar."],
+    ["extremewideshot","Subjek kecil dalam lingkungan luas."],
+    ["environmentalportrait","Potret dengan lingkungan sebagai bagian cerita."],
+    ["overheadflatlay","Objek disusun dan difoto dari atas."],
+    ["selfie","Foto diri dari jarak dekat."],
+    ["group portrait","Potret beberapa orang dalam satu frame."],
+    ["establishing shot","Gambar luas untuk memperkenalkan lokasi."],
+    ["detail shot","Fokus pada detail tertentu."]
+  ],
+  "Lens & Focus": [
+    ["wideanglelens","Lensa dengan bidang pandang lebar."],
+    ["ultrawideangle","Perspektif sangat lebar."],
+    ["fisheye","Distorsi melengkung khas lensa mata ikan."],
+    ["telephotolens","Tampilan khas lensa telefoto."],
+    ["portraitlens","Gaya lensa khusus potret."],
+    ["macroshot","Detail objek kecil dari jarak dekat."],
+    ["shallowdof","Fokus tipis dengan latar belakang blur."],
+    ["deepdof","Area fokus luas dari depan hingga belakang."],
+    ["bokeh","Bulat cahaya dan latar blur artistik."],
+    ["lenscompression","Perspektif telefoto yang terasa padat."],
+    ["motionblur","Efek blur karena gerakan."],
+    ["tiltshift","Fokus selektif dengan kesan miniatur."],
+    ["rackfocus","Fokus berpindah di antara objek."],
+    ["softfocus","Tampilan lembut dengan detail yang halus."],
+    ["sharpfocus","Subjek terlihat tajam dan jelas."]
+  ],
+  "Composition": [
+    ["ruleofthirds","Subjek diletakkan pada sepertiga frame."],
+    ["centercomposition","Subjek berada di tengah."],
+    ["symmetricalcomposition","Susunan kiri dan kanan simetris."],
+    ["asymmetricalcomposition","Komposisi dengan keseimbangan tidak simetris."],
+    ["negative space","Ruang kosong di sekitar subjek."],
+    ["leadinglines","Garis mengarahkan mata menuju subjek."],
+    ["frameinframe","Objek lain membingkai subjek."],
+    ["foregroundblur","Objek depan dibuat blur."],
+    ["layeredcomposition","Lapisan foreground, midground, dan background."],
+    ["diagonalcomposition","Elemen tersusun diagonal."],
+    ["minimalistcomposition","Komposisi sederhana dan bersih."],
+    ["reflectionshot","Komposisi memanfaatkan pantulan."],
+    ["silhouette","Subjek tampak sebagai siluet."],
+    ["filltheframe","Subjek memenuhi sebagian besar frame."],
+    ["offcentercomposition","Subjek ditempatkan di luar titik tengah."]
+  ],
+  "Photography Style": [
+    ["cinematicphotography","Gaya film dengan warna dan suasana dramatis."],
+    ["filml ook","Tampilan warna dan tekstur menyerupai film."],
+    ["analogfilm","Karakter visual film analog."],
+    ["35mmfilm","Karakter fotografi film 35 mm."],
+    ["vintagephotography","Nuansa foto klasik."],
+    ["moodyphotography","Suasana gelap atau emosional."],
+    ["editorialphotography","Gaya editorial majalah."],
+    ["documentaryphotography","Gaya dokumenter yang natural."],
+    ["fashionphotography","Fotografi mode profesional."],
+    ["editorialportrait","Potret bergaya editorial."],
+    ["beautyphotography","Potret yang menonjolkan kecantikan."],
+    ["streetstylephotography","Gaya busana di lingkungan urban."],
+    ["luxuryphotography","Nuansa premium dan elegan."],
+    ["streetphotography","Momen keseharian di ruang publik."],
+    ["candidphotography","Momen spontan tanpa pose kaku."],
+    ["paparazzistyle","Gaya foto spontan seperti foto selebritas."],
+    ["blackandwhite","Foto hitam putih."],
+    ["monochrome","Foto dengan satu keluarga warna dominan."],
+    ["highcontrast","Perbedaan terang dan gelap yang kuat."],
+    ["desaturatedcolors","Warna lebih redup dan tidak terlalu jenuh."]
+  ],
+  "Lighting": [
+    ["naturallighting","Cahaya alami."],
+    ["goldenhour","Cahaya hangat saat menjelang matahari terbenam."],
+    ["bluehour","Cahaya biru saat senja atau menjelang fajar."],
+    ["backlighting","Cahaya datang dari belakang subjek."],
+    ["rimlighting","Garis cahaya di tepi subjek."],
+    ["softlighting","Cahaya lembut dengan bayangan halus."],
+    ["hardlighting","Cahaya keras dan bayangan tegas."],
+    ["lowkeylighting","Dominasi area gelap dan pencahayaan terbatas."],
+    ["highkeylighting","Tampilan terang dengan bayangan lembut."],
+    ["chiaroscuro","Kontras dramatis antara cahaya dan bayangan."],
+    ["side lighting","Cahaya datang dari samping."],
+    ["studio lighting","Pencahayaan terkontrol di studio."],
+    ["window lighting","Cahaya alami dari jendela."],
+    ["neon lighting","Cahaya warna neon."],
+    ["volumetric lighting","Cahaya tampak menembus kabut atau partikel."]
+  ],
+  "Creative Techniques": [
+    ["handheldshot","Kesan gambar diambil dengan kamera genggam."],
+    ["longexposure","Efek eksposur panjang."],
+    ["slowshutter","Efek gerakan dari rana lambat."],
+    ["doubleexposure","Dua gambar dipadukan dalam satu visual."],
+    ["reflectionpov","Sudut pandang memanfaatkan pantulan."],
+    ["motionfreeze","Gerakan cepat dibekukan dengan tajam."],
+    ["panning shot","Subjek bergerak tajam dengan latar blur."],
+    ["lightpainting","Jejak cahaya membentuk pola."],
+    ["lensflare","Pantulan cahaya lensa yang artistik."],
+    ["prismphotography","Efek cahaya melalui prisma."],
+    ["silhouettephotography","Fotografi siluet dengan cahaya belakang."],
+    ["highspeedphotography","Menangkap peristiwa yang sangat cepat."],
+    ["surrealphotography","Visual fotografi dengan nuansa surealis."],
+    ["compositephotography","Gabungan beberapa elemen gambar."]
+  ]
+};
+
+const search = document.getElementById("search");
+const tabs = document.getElementById("tabs");
+const grid = document.getElementById("grid");
+const count = document.getElementById("count");
+const empty = document.getElementById("empty");
+const toast = document.getElementById("toast");
+let active = "Semua";
+let timer;
+
+const names = ["Semua", ...Object.keys(groups)];
+
+names.forEach(name => {
+  const b = document.createElement("button");
+  b.textContent = name;
+  b.className = name === active ? "active" : "";
+  b.onclick = () => {
+    active = name;
+    [...tabs.children].forEach(x =>
+      x.classList.toggle("active", x.textContent === name));
+    render();
+  };
+  tabs.appendChild(b);
+});
+
+function allItems() {
+  return Object.entries(groups).flatMap(([category, items]) =>
+    items.map(([name, desc]) => ({name, desc, category})));
+}
+
+function render() {
+  const q = search.value.toLowerCase().trim();
+  const items = allItems().filter(item =>
+    (active === "Semua" || item.category === active) &&
+    (item.name.toLowerCase().includes(q) ||
+     item.desc.toLowerCase().includes(q) ||
+     item.category.toLowerCase().includes(q))
+  );
+
+  grid.replaceChildren();
+  count.textContent = `${items.length} mode`;
+  empty.hidden = items.length !== 0;
+
+  items.forEach(item => {
+    const card = document.createElement("article");
+    card.className = "card";
+
+    const code = document.createElement("div");
+    code.className = "code";
+    code.textContent = "/" + item.name.replaceAll(" ", "");
+
+    const desc = document.createElement("div");
+    desc.className = "desc";
+    desc.textContent = item.desc;
+
+    const foot = document.createElement("div");
+    foot.className = "card-foot";
+
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = item.category;
+
+    const btn = document.createElement("button");
+    btn.className = "copy";
+    btn.textContent = "Salin";
+    btn.onclick = () => copyText("/" + item.name.replaceAll(" ", ""));
+
+    foot.append(tag, btn);
+    card.append(code, desc, foot);
+    grid.appendChild(card);
+  });
+}
+
+function notify(message) {
+  toast.textContent = message;
+  toast.style.display = "block";
+  clearTimeout(timer);
+  timer = setTimeout(() => toast.style.display = "none", 1800);
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    notify("Berhasil disalin!");
+  } catch {
+    const area = document.createElement("textarea");
+    area.value = text;
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    area.remove();
+    notify(ok ? "Berhasil disalin!" : "Gagal menyalin teks.");
+  }
+}
+
+search.addEventListener("input", render);
+
+document.getElementById("copyAll").onclick = () => {
+  const q = search.value.toLowerCase().trim();
+  const items = allItems().filter(item =>
+    (active === "Semua" || item.category === active) &&
+    (item.name.toLowerCase().includes(q) ||
+     item.desc.toLowerCase().includes(q) ||
+     item.category.toLowerCase().includes(q))
+  );
+  if (!items.length) return notify("Tidak ada mode untuk disalin.");
+  copyText(items.map(x => "/" + x.name.replaceAll(" ", "")).join(", "));
+};
+
+render();
+</script>
+</body>
+</html>
