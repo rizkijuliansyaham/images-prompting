@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -125,6 +124,17 @@ button:hover { border-color: var(--accent); }
   border-color: var(--accent);
   font-weight: 800;
 }
+.grid.combo { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.title { font-weight: 800; font-size: 16px; margin-bottom: 4px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 14px; }
+.chip {
+  font-size: 12px;
+  color: var(--accent);
+  border: 1px solid #3a4a2a;
+  background: #1a2112;
+  border-radius: 999px;
+  padding: 4px 9px;
+}
 .empty {
   text-align: center;
   color: var(--muted);
@@ -158,13 +168,13 @@ footer {
   <div class="eyebrow">VISUAL TOOLKIT / 001</div>
   <h1>Photo Mode<br>Library<span style="color:var(--accent)">.</span></h1>
   <p>Kumpulan keyword POV, camera angle, framing, lens,
-  composition, dan style fotografi untuk referensi edit foto AI.</p>
+  composition, dan style fotografi untuk referensi edit foto AI. Buka tab <b>Kombinasi</b> untuk preset siap pakai.</p>
 </header>
 
 <main>
   <div class="toolbar">
     <input id="search" type="search"
-      placeholder="Cari mode, contoh: overheadpov..."
+      placeholder="Cari mode atau kombinasi, contoh: overheadpov, sinematik..."
       aria-label="Cari mode fotografi">
     <button class="copy-all" id="copyAll">Salin hasil</button>
   </div>
@@ -328,6 +338,69 @@ const groups = {
   ]
 };
 
+const combos = [
+  ["Potret","Potret sinematik","eyelevel mediumshot portraitlens shallowdof ruleofthirds cinematicphotography goldenhour"],
+  ["Potret","Potret editorial / majalah","threequarterview cowboyshot telephotolens centercomposition editorialportrait softlighting studiolighting"],
+  ["Potret","Potret emosional / moody","sideprofile mediumcloseup bokeh negativespace moodyphotography lowkeylighting chiaroscuro"],
+  ["Potret","Close-up beauty","frontalview closeup portraitlens sharpfocus filltheframe beautyphotography highkeylighting"],
+  ["Gaya Hidup & Jalanan","Street candid","eyelevel longshot 35mmfilm candidphotography streetphotography layeredcomposition naturallighting"],
+  ["Gaya Hidup & Jalanan","Fashion street style","lowangle fullbodyshot wideanglelens diagonalcomposition streetstylephotography goldenhour"],
+  ["Gaya Hidup & Jalanan","Foto nostalgia / vintage","eyelevel mediumshot analogfilm softfocus vintagephotography desaturatedcolors windowlighting"],
+  ["Kreatif & Dramatis","Siluet senja","lowangle fullbodyshot silhouettephotography centercomposition backlighting goldenhour lensflare"],
+  ["Kreatif & Dramatis","Malam kota / neon","eyelevel mediumshot bokeh reflectionshot cinematicphotography neonlighting bluehour"],
+  ["Kreatif & Dramatis","Lewat jendela / kaca","throughwindow mediumcloseup frameinframe moodyphotography windowlighting softfocus"],
+  ["Kreatif & Dramatis","Heroik / powerful","lowangle fullbodyshot wideanglelens centercomposition cinematicphotography rimlighting"],
+  ["Kasus Khusus","Selfie estetik","overheadselfie closeup softlighting bokeh naturallighting"],
+  ["Kasus Khusus","Flat lay produk / makanan","overheadflatlay topdownview minimalistcomposition sharpfocus softlighting"],
+  ["Kasus Khusus","Landscape / traveler","aerialview extremewideshot deepdof ruleofthirds goldenhour"],
+  ["Kasus Khusus","Foto aksi / gerak","lowangle fullbodyshot motionfreeze highspeedphotography hardlighting"],
+  ["Kasus Khusus","Kesan miniatur","birdeyeview wideshot tiltshift deepdof naturallighting"]
+].map(([category,title,k]) => ({category,title,keys:k.split(" ")}));
+
+const comboText = c => c.keys.map(k => "/" + k).join(", ");
+
+function visibleCombos() {
+  const q = search.value.toLowerCase().trim();
+  return combos.filter(c =>
+    c.title.toLowerCase().includes(q) ||
+    c.category.toLowerCase().includes(q) ||
+    c.keys.join(" ").includes(q));
+}
+
+function renderCombos() {
+  const items = visibleCombos();
+  grid.classList.add("combo");
+  count.textContent = `${items.length} kombinasi`;
+  empty.hidden = items.length !== 0;
+  items.forEach(c => {
+    const card = document.createElement("article");
+    card.className = "card";
+    const title = document.createElement("div");
+    title.className = "title";
+    title.textContent = c.title;
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    c.keys.forEach(k => {
+      const s = document.createElement("span");
+      s.className = "chip";
+      s.textContent = "/" + k;
+      chips.appendChild(s);
+    });
+    const foot = document.createElement("div");
+    foot.className = "card-foot";
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = c.category;
+    const btn = document.createElement("button");
+    btn.className = "copy";
+    btn.textContent = "Salin kombinasi";
+    btn.onclick = () => copyText(comboText(c));
+    foot.append(tag, btn);
+    card.append(title, chips, foot);
+    grid.appendChild(card);
+  });
+}
+
 const search = document.getElementById("search");
 const tabs = document.getElementById("tabs");
 const grid = document.getElementById("grid");
@@ -337,7 +410,7 @@ const toast = document.getElementById("toast");
 let active = "Semua";
 let timer;
 
-const names = ["Semua", ...Object.keys(groups)];
+const names = ["Semua", "Kombinasi", ...Object.keys(groups)];
 
 names.forEach(name => {
   const b = document.createElement("button");
@@ -358,6 +431,11 @@ function allItems() {
 }
 
 function render() {
+  grid.classList.remove("combo");
+  if (active === "Kombinasi") {
+    grid.replaceChildren();
+    return renderCombos();
+  }
   const q = search.value.toLowerCase().trim();
   const items = allItems().filter(item =>
     (active === "Semua" || item.category === active) &&
@@ -425,6 +503,11 @@ async function copyText(text) {
 search.addEventListener("input", render);
 
 document.getElementById("copyAll").onclick = () => {
+  if (active === "Kombinasi") {
+    const list = visibleCombos();
+    if (!list.length) return notify("Tidak ada kombinasi untuk disalin.");
+    return copyText(list.map(c => c.title + ": " + comboText(c)).join("\n"));
+  }
   const q = search.value.toLowerCase().trim();
   const items = allItems().filter(item =>
     (active === "Semua" || item.category === active) &&
